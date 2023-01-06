@@ -2,10 +2,23 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+func InitServer(address string, router *gin.Engine) *http.Server {
+	gin.SetMode(gin.ReleaseMode)
+	return &http.Server{
+		Addr:           address,
+		Handler:        router,
+		ReadTimeout:    10 * time.Second,
+		WriteTimeout:   10 * time.Second,
+		MaxHeaderBytes: 1 << 20,
+	}
+}
 
 func init() {
 	fmt.Println("初始化")
@@ -57,5 +70,7 @@ func main() {
 	router.GET("/xml", _xml)
 	router.GET("/yaml", _yaml)
 	router.GET("/html", _html)
-	router.Run(":80")
+
+	server := InitServer(":9091", router)
+	server.ListenAndServe()
 }
