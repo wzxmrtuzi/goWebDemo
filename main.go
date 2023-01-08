@@ -118,14 +118,53 @@ func _param(c *gin.Context) {
 }
 
 func _form(c *gin.Context) {
-	name := c.PostForm("name")
-	nameArr := c.PostFormArray("name")
-	c.JSON(http.StatusOK, common.SuccessArray(name, nameArr))
+	// form-data
+	// name := c.PostForm("name")
+	// nameArr := c.PostFormArray("name")
+	// c.JSON(http.StatusOK, common.SuccessArray(name, nameArr, files, err, fileValue))
+
+	// 接收所有参数和文件
+	params, _ := c.MultipartForm()
+	// 参数
+	value := params.Value
+	// 文件
+	files := params.File
+	c.JSON(http.StatusOK, common.SuccessArray(files, value))
 }
+
+func _raw(c *gin.Context) {
+	// application/x-www-form-urlencoded
+	raw, err := c.GetRawData()
+	if err != nil {
+		fmt.Println("失败")
+	}
+	contentType := c.GetHeader("content-type")
+	c.JSON(http.StatusOK, common.SuccessArray(raw, contentType))
+}
+
+func _body(c *gin.Context) {
+	var user struct {
+		Name string `json:"name"`
+		Age  int    `json:"age"`
+	}
+	err := c.ShouldBind(&user)
+	if err == nil {
+		c.JSON(http.StatusOK, common.Success(user))
+	} else {
+		fmt.Println(err.Error())
+		c.JSON(http.StatusInternalServerError, common.Error("参数错误"))
+	}
+}
+
+func _header(c *gin.Context) {
+	c.Header("token", "yyyyyyyyy")
+	c.JSON(http.StatusOK, common.Success(nil))
+}
+
+var router = gin.Default()
 
 func main() {
 
-	router := gin.Default()
 	router.LoadHTMLGlob("web/**")
 	router.StaticFile("/dogImg", "static/dog.jpg")
 	router.StaticFS("/fs", http.Dir("static/text"))
@@ -140,6 +179,11 @@ func main() {
 	router.GET("/query", _query)
 	router.GET("/param/:user/:age", _param)
 	router.POST("/form", _form)
+	router.POST("/raw", _raw)
+
+	router.POST("/body", _body)
+
+	router.POST("/header", _header)
 
 	server := InitServer(router)
 	server.ListenAndServe()
