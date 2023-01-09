@@ -2,11 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/gin-gonic/gin"
-	"goWebDemo/common"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/gin-gonic/gin"
+
+	"goWebDemo/response"
 )
 
 func InitServer(router *gin.Engine, address ...string) *http.Server {
@@ -35,9 +38,10 @@ func resolveAddress(addr []string) string {
 
 func init() {
 	res, err := strconv.Atoi("123")
-	fmt.Println(err)
-	fmt.Println("初始化", res)
-
+	if err != nil {
+		log.Println("错误", err)
+	}
+	log.Printf("初始化,res: %v", res)
 }
 
 func _string(ctx *gin.Context) {
@@ -76,7 +80,7 @@ func _json(c *gin.Context) {
 	user2.Age = 23
 	user2.Password = "123456ffff"
 	res = append(res, user1, user2)
-	c.JSON(http.StatusOK, common.Success(res))
+	response.Success(c, res)
 }
 
 func _xml(c *gin.Context) {
@@ -114,14 +118,14 @@ func _param(c *gin.Context) {
 	user := c.Param("user")
 	age := c.Param("age")
 	password := c.DefaultPostForm("password", "123456")
-	c.JSON(http.StatusOK, common.SuccessArray(user, age, password))
+	response.SuccessArray(c, user, age, password)
 }
 
 func _form(c *gin.Context) {
 	// form-data
 	// name := c.PostForm("name")
 	// nameArr := c.PostFormArray("name")
-	// c.JSON(http.StatusOK, common.SuccessArray(name, nameArr, files, err, fileValue))
+	// c.JSON(http.StatusOK, response.SuccessArray(name, nameArr, files, err, fileValue))
 
 	// 接收所有参数和文件
 	params, _ := c.MultipartForm()
@@ -129,7 +133,7 @@ func _form(c *gin.Context) {
 	value := params.Value
 	// 文件
 	files := params.File
-	c.JSON(http.StatusOK, common.SuccessArray(files, value))
+	response.SuccessArray(c, files, value)
 }
 
 func _raw(c *gin.Context) {
@@ -139,7 +143,7 @@ func _raw(c *gin.Context) {
 		fmt.Println("失败")
 	}
 	contentType := c.GetHeader("content-type")
-	c.JSON(http.StatusOK, common.SuccessArray(raw, contentType))
+	response.SuccessArray(c, raw, contentType)
 }
 
 func _body(c *gin.Context) {
@@ -149,16 +153,16 @@ func _body(c *gin.Context) {
 	}
 	err := c.ShouldBind(&user)
 	if err == nil {
-		c.JSON(http.StatusOK, common.Success(user))
+		response.Success(c, user)
 	} else {
 		fmt.Println(err.Error())
-		c.JSON(http.StatusInternalServerError, common.Error("参数错误"))
+		response.Error(c, "参数错误")
 	}
 }
 
 func _header(c *gin.Context) {
 	c.Header("token", "yyyyyyyyy")
-	c.JSON(http.StatusOK, common.Success(nil))
+	response.Success(c, nil)
 }
 
 var router = gin.Default()
@@ -185,6 +189,10 @@ func main() {
 
 	router.POST("/header", _header)
 
-	server := InitServer(router)
+	// 分组
+	v1 := router.Group("api/v1")
+	v1.GET("/json", _json)
+
+	server := InitServer(router, ":9091")
 	server.ListenAndServe()
 }
